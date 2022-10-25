@@ -1509,9 +1509,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
     vdStereoMatch_ms.push_back(mCurrentFrame.mTimeStereoMatch);
 #endif
 
-    //cout << "Tracking start" << endl;
     Track();
-    //cout << "Tracking end" << endl;
 
     return mCurrentFrame.GetPose();
 }
@@ -1556,7 +1554,6 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, co
 #ifdef REGISTER_TIMES
     vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
 #endif
-
     Track();
 
     return mCurrentFrame.GetPose();
@@ -1855,7 +1852,6 @@ void Tracking::Track()
         }
     }
 
-
     if ((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) && mpLastKeyFrame)
         mCurrentFrame.SetNewBias(mpLastKeyFrame->GetImuBias());
 
@@ -1886,7 +1882,6 @@ void Tracking::Track()
     unique_lock<mutex> lock(pCurrentMap->mMutexMapUpdate);
 
     mbMapUpdated = false;
-
     int nCurMapChangeIndex = pCurrentMap->GetMapChangeIndex();
     int nMapChangeIndex = pCurrentMap->GetLastMapChange();
     if(nCurMapChangeIndex>nMapChangeIndex)
@@ -1941,10 +1936,11 @@ void Tracking::Track()
 
                 // Local Mapping might have changed some MapPoints tracked in last frame
                 CheckReplacedInLastFrame();
-
+                //cerr << 1944 << endl;
                 if((!mbVelocity && !pCurrentMap->isImuInitialized()) || mCurrentFrame.mnId<mnLastRelocFrameId+2)
                 {
                     Verbose::PrintMess("TRACK: Track with respect to the reference KF ", Verbose::VERBOSITY_DEBUG);
+                    // 여기가 문제
                     bOK = TrackReferenceKeyFrame();
                 }
                 else
@@ -1954,7 +1950,7 @@ void Tracking::Track()
                     if(!bOK)
                         bOK = TrackReferenceKeyFrame();
                 }
-
+                //cerr << 1957 << endl;
 
                 if (!bOK)
                 {
@@ -1977,7 +1973,6 @@ void Tracking::Track()
             }
             else
             {
-
                 if (mState == RECENTLY_LOST)
                 {
                     Verbose::PrintMess("Lost for a short time", Verbose::VERBOSITY_NORMAL);
@@ -2013,7 +2008,6 @@ void Tracking::Track()
                 }
                 else if (mState == LOST)
                 {
-
                     Verbose::PrintMess("A new map is started...", Verbose::VERBOSITY_NORMAL);
 
                     if (pCurrentMap->KeyFramesInMap()<10)
@@ -2726,15 +2720,14 @@ bool Tracking::TrackReferenceKeyFrame()
     // If enough matches are found we setup a PnP solver
     ORBmatcher matcher(0.7,true);
     vector<MapPoint*> vpMapPointMatches;
-
+    // 여기가 문제
     int nmatches = matcher.SearchByBoW(mpReferenceKF,mCurrentFrame,vpMapPointMatches);
-
     if(nmatches<15)
     {
-        cout << "TRACK_REF_KF: Less than 15 matches!!\n";
+        std::cout << "TRACK_REF_KF: Less than 15 matches!!\n";
         return false;
     }
-
+    //cerr << 2737 << endl;
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.GetPose());
 

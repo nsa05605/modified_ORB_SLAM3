@@ -129,16 +129,19 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mTimeORB_Ext = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndExtORB - time_StartExtORB).count();
 #endif
 
-    N = mvKeys.size();
+    N = mvKeys.size();  // mvKeys -> left image's keys
     if(mvKeys.empty())
         return;
-
+    //std::cerr << "Frame keys : " << N << std::endl;
     UndistortKeyPoints();
 
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartStereoMatches = std::chrono::steady_clock::now();
 #endif
+    // 여기가 문제
+    //cerr << "start stereo matches" << endl;
     ComputeStereoMatches();
+    //cerr << "end stereo matches" << endl;
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_EndStereoMatches = std::chrono::steady_clock::now();
 
@@ -149,8 +152,6 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvbOutlier = vector<bool>(N,false);
     mmProjectPoints.clear();
     mmMatchedInImage.clear();
-
-
     // This is done only for the first Frame (or after a change in the calibration)
     if(mbInitialComputations)
     {
@@ -170,7 +171,6 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
         mbInitialComputations=false;
     }
-
     mb = mbf/fx;
 
     if(pPrevF)
@@ -195,6 +195,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     monoRight = -1;
 
     AssignFeaturesToGrid();
+
 }
 
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera,Frame* pPrevF, const IMU::Calib &ImuCalib)
@@ -285,7 +286,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-
+// Monocular
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, GeometricCamera* pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame* pPrevF, const IMU::Calib &ImuCalib)
     :mpcpi(NULL),mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(static_cast<Pinhole*>(pCamera)->toK()), mK_(static_cast<Pinhole*>(pCamera)->toK_()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
@@ -320,14 +321,14 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     if(mvKeys.empty())
         return;
 
-    UndistortKeyPoints();
+    UndistortKeyPoints();   // 왜곡 보정(mvKeys -> mvKeysUn 으로 변경) : 키포인트의 좌표를 바꿔준거고
 
-    // Set no stereo information
+    // Set no stereo information        // 아마 stereo가 아니라고 하기 위해서 아래 값들을 사용하지 않기 위해 -1을 넣는듯?
     mvuRight = vector<float>(N,-1);
     mvDepth = vector<float>(N,-1);
     mnCloseMPs = 0;
 
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));   // 맵포인트 벡터를 만들어주고
 
     mmProjectPoints.clear();// = map<long unsigned int, cv::Point2f>(N, static_cast<cv::Point2f>(NULL));
     mmMatchedInImage.clear();
@@ -337,7 +338,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     // This is done only for the first Frame (or after a change in the calibration)
     if(mbInitialComputations)
     {
-        ComputeImageBounds(imGray);
+        ComputeImageBounds(imGray); // 여기에서는 사용할 이미지의 범위를 지정(minX,maxX,minY,maxY)
 
         mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
         mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
@@ -542,7 +543,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
         // Check distance is in the scale invariance region of the MapPoint
         const float maxDistance = pMP->GetMaxDistanceInvariance();
         const float minDistance = pMP->GetMinDistanceInvariance();
-        const Eigen::Vector3f PO = P - mOw;
+        const Eigen::Vector3f PO = P - mOw; // P는 world pose
         const float dist = PO.norm();
 
         if(dist<minDistance || dist>maxDistance)
@@ -746,9 +747,9 @@ void Frame::ComputeBoW()
 
 void Frame::UndistortKeyPoints()
 {
-    if(mDistCoef.at<float>(0)==0.0)
+    if(mDistCoef.at<float>(0)==0.0) // 왜곡이 없으면(parameter값)
     {
-        mvKeysUn=mvKeys;
+        mvKeysUn=mvKeys;            // 그대로 mvKeysUn에 넣고 진행
         return;
     }
 
@@ -757,7 +758,7 @@ void Frame::UndistortKeyPoints()
 
     for(int i=0; i<N; i++)
     {
-        mat.at<float>(i,0)=mvKeys[i].pt.x;
+        mat.at<float>(i,0)=mvKeys[i].pt.x;  // 각 키포인트의 x, y 좌표를 mat에 저장하네요
         mat.at<float>(i,1)=mvKeys[i].pt.y;
     }
 
@@ -781,7 +782,7 @@ void Frame::UndistortKeyPoints()
 
 void Frame::ComputeImageBounds(const cv::Mat &imLeft)
 {
-    if(mDistCoef.at<float>(0)!=0.0)
+    if(mDistCoef.at<float>(0)!=0.0) // 왜곡이 있다면
     {
         cv::Mat mat(4,2,CV_32F);
         mat.at<float>(0,0)=0.0; mat.at<float>(0,1)=0.0;
@@ -819,24 +820,30 @@ void Frame::ComputeStereoMatches()
 
     //Assign keypoints to row table
     vector<vector<size_t> > vRowIndices(nRows,vector<size_t>());
-
     for(int i=0; i<nRows; i++)
         vRowIndices[i].reserve(200);
-
     const int Nr = mvKeysRight.size();
-
+    
     for(int iR=0; iR<Nr; iR++)
     {
         const cv::KeyPoint &kp = mvKeysRight[iR];
         const float &kpY = kp.pt.y;
+
+        //const cv::KeyPoint &kp_l = mvKeys[iR];
+        // cerr << "Left   iR : " << iR << " X : " << kp_l.pt.x << " Y : " << kp_l.pt.y << endl;
+        // cerr << "Right  iR : " << iR << " X : " << kp.pt.x << " Y : " << kp.pt.y << endl;
+        if(kpY < 1){
+            continue;
+        }
+
         const float r = 2.0f*mvScaleFactors[mvKeysRight[iR].octave];
         const int maxr = ceil(kpY+r);
         const int minr = floor(kpY-r);
 
         for(int yi=minr;yi<=maxr;yi++)
             vRowIndices[yi].push_back(iR);
+        
     }
-
     // Set limits for search
     const float minZ = mb;
     const float minD = 0;
@@ -845,12 +852,11 @@ void Frame::ComputeStereoMatches()
     // For each left keypoint search a match in the right image
     vector<pair<int, int> > vDistIdx;
     vDistIdx.reserve(N);
-
     for(int iL=0; iL<N; iL++)
     {
-        const cv::KeyPoint &kpL = mvKeys[iL];
-        const int &levelL = kpL.octave;
-        const float &vL = kpL.pt.y;
+        const cv::KeyPoint &kpL = mvKeys[iL];   // left camera의 keypoint를 순서대로 받아오고
+        const int &levelL = kpL.octave;         // 각 keypoint의 레벨을 받아오고
+        const float &vL = kpL.pt.y;             // y, x 좌표를 받아오고
         const float &uL = kpL.pt.x;
 
         const vector<size_t> &vCandidates = vRowIndices[vL];
@@ -860,7 +866,6 @@ void Frame::ComputeStereoMatches()
 
         const float minU = uL-maxD;
         const float maxU = uL-minD;
-
         if(maxU<0)
             continue;
 
@@ -868,7 +873,6 @@ void Frame::ComputeStereoMatches()
         size_t bestIdxR = 0;
 
         const cv::Mat &dL = mDescriptors.row(iL);
-
         // Compare descriptor to right keypoints
         for(size_t iC=0; iC<vCandidates.size(); iC++)
         {
@@ -892,7 +896,7 @@ void Frame::ComputeStereoMatches()
                 }
             }
         }
-
+        // 여기 안에가 문제
         // Subpixel match by correlation
         if(bestDist<thOrbDist)
         {
@@ -902,11 +906,12 @@ void Frame::ComputeStereoMatches()
             const float scaleduL = round(kpL.pt.x*scaleFactor);
             const float scaledvL = round(kpL.pt.y*scaleFactor);
             const float scaleduR0 = round(uR0*scaleFactor);
+                        
 
             // sliding window search
             const int w = 5;
             cv::Mat IL = mpORBextractorLeft->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(scaleduL-w,scaleduL+w+1);
-
+          
             int bestDist = INT_MAX;
             int bestincR = 0;
             const int L = 5;
@@ -918,9 +923,34 @@ void Frame::ComputeStereoMatches()
             if(iniu<0 || endu >= mpORBextractorRight->mvImagePyramid[kpL.octave].cols)
                 continue;
 
+            
             for(int incR=-L; incR<=+L; incR++)
             {
-                cv::Mat IR = mpORBextractorRight->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(scaleduR0+incR-w,scaleduR0+incR+w+1);
+                // 요기
+                // rowRange(), colRange()는 각각 행 또는 열로 구성된 행렬로 반환
+                // colRange(startcol, endcol)로 설정함
+                // scaleduR0는 
+                // incR은 
+                // w는 5
+                if (scaleduR0+incR-w < 0){
+                    //cerr << "scaleduR0 : " << scaleduR0 << " incR : " << incR << " w : " << w << '\n';
+                }
+
+                int start, end;
+                if(scaleduR0+incR-w < 0){
+                    start = 0;
+                    end = w*2+1;
+                }
+                else{
+                    start = scaleduR0+incR-w;
+                    end = scaleduR0+incR+w+1;
+                }
+
+                //cv::Mat IR = mpORBextractorRight->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(scaleduR0+incR-w,scaleduR0+incR+w+1);
+                cv::Mat IR = mpORBextractorRight->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(start,end);
+
+                // cerr << "IL : " << IL.rows << " " << IL.cols << endl;
+                // cerr << "IR : " << IR.rows << " " << IR.cols << endl;
 
                 float dist = cv::norm(IL,IR,cv::NORM_L1);
                 if(dist<bestDist)
@@ -978,6 +1008,7 @@ void Frame::ComputeStereoMatches()
             mvDepth[vDistIdx[i].second]=-1;
         }
     }
+
 }
 
 
@@ -1031,6 +1062,7 @@ void Frame::setIntegrated()
     mbImuPreintegrated = true;
 }
 
+// Stereo-Inertial
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera, GeometricCamera* pCamera2, Sophus::SE3f& Tlr,Frame* pPrevF, const IMU::Calib &ImuCalib)
         :mpcpi(NULL), mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mK_(Converter::toMatrix3f(K)),  mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
          mImuCalib(ImuCalib), mpImuPreintegrated(NULL), mpPrevFrame(pPrevF),mpImuPreintegratedFrame(NULL), mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbImuPreintegrated(false), mpCamera(pCamera), mpCamera2(pCamera2),
@@ -1039,6 +1071,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 {
     imgLeft = imLeft.clone();
     imgRight = imRight.clone();
+    // 좌측, 우측 이미지를 가져오고
 
     // Frame ID
     mnId=nNextId++;

@@ -90,6 +90,13 @@ protected:
                                            const int &maxX, const int &minY, const int &maxY, const int &nFeatures, const int &level);
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
+
+
+    void DetectKeyPointsBRISK(std::vector<cv::KeyPoint> &keypoints);        // 이미지를 3x3으로 나눠서 BRISK keypoints를 추출하는 함수
+    void DetectKeyPointsbyFAST(std::vector<cv::KeyPoint> &keypoints);       // 기존 ORB-SLAM 방식으로 FAST keypoints를 추출하는 함수(v<v<Keys>> 가 아닌 v<Keys> 형태 사용)
+    void DetectKeyPointsORB(std::vector<cv::KeyPoint> &KeyPoints);          // 이미지를 3x3으로 나눠서 ORB keypoints를 추출하는 함수(사용 x)
+
+
     std::vector<cv::Point> pattern;
 
     int nfeatures;
@@ -106,6 +113,15 @@ protected:
     std::vector<float> mvInvScaleFactor;    
     std::vector<float> mvLevelSigma2;
     std::vector<float> mvInvLevelSigma2;
+
+    // myORB
+    cv::Ptr<cv::Feature2D> feature_ORB;
+    cv::Ptr<cv::Feature2D> feature_ORB_min;
+    cv::Ptr<cv::Feature2D> feature_BRISK;
+    cv::Ptr<cv::Feature2D> feature_BRISK_min;
+    cv::Ptr<cv::Feature2D> feature_BRISK_mid;
+    cv::Ptr<cv::Feature2D> descriptor_BRISK;
+
 };
 
 } //namespace ORB_SLAM

@@ -21,6 +21,7 @@
 #include<fstream>
 #include<iomanip>
 #include<chrono>
+#include <chrono>
 
 #include<opencv2/core/core.hpp>
 
@@ -33,6 +34,8 @@ void LoadImages(const string &strPathLeft, const string &strPathRight, const str
 
 int main(int argc, char **argv)
 {  
+    //double sum_nano = 0;
+
     if(argc < 5)
     {
         cerr << endl << "Usage: ./stereo_euroc path_to_vocabulary path_to_settings path_to_sequence_folder_1 path_to_times_file_1 (path_to_image_folder_2 path_to_times_file_2 ... path_to_image_folder_N path_to_times_file_N) (trajectory_file_name)" << endl;
@@ -105,7 +108,9 @@ int main(int argc, char **argv)
             // Read left and right images from file
             imLeft = cv::imread(vstrImageLeft[seq][ni],cv::IMREAD_UNCHANGED); //,cv::IMREAD_UNCHANGED);
             imRight = cv::imread(vstrImageRight[seq][ni],cv::IMREAD_UNCHANGED); //,cv::IMREAD_UNCHANGED);
-
+            // cv::resize(imLeft, imLeft, cv::Size(640, 480), 0, 0, 1);
+            // cv::resize(imRight, imRight, cv::Size(640, 480), 0, 0, 1);
+            //cerr << "image sequence " << ni << " open" << '\n';
             if(imLeft.empty())
             {
                 cerr << endl << "Failed to load image at: "
@@ -120,6 +125,10 @@ int main(int argc, char **argv)
                 return 1;
             }
 
+            // cerr << "Sequence : " << ni << endl;
+            // cerr << "cols_Left : " << imLeft.cols << endl;
+            // cerr << "cols_Right : " << imRight.cols << endl;
+
             double tframe = vTimestampsCam[seq][ni];
 
     #ifdef COMPILEDWITHC11
@@ -129,8 +138,16 @@ int main(int argc, char **argv)
     #endif
 
             // Pass the images to the SLAM system
+            //cerr << "current seq : " << ni << endl;
+            //std::chrono::system_clock::time_point start = chrono::system_clock::now();
             SLAM.TrackStereo(imLeft,imRight,tframe, vector<ORB_SLAM3::IMU::Point>(), vstrImageLeft[seq][ni]);
+            //std::chrono::system_clock::time_point end = chrono::system_clock::now();
+            //chrono::nanoseconds nano = end - start;
+            
+            //cerr << "tracking time : " << nano.count() << endl;
+            //sum_nano += nano.count();
 
+            
     #ifdef COMPILEDWITHC11
             std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     #else
@@ -167,6 +184,21 @@ int main(int argc, char **argv)
     }
     // Stop all threads
     SLAM.Shutdown();
+
+    // Tracking time statistics
+    sort(vTimesTrack.begin(),vTimesTrack.end());
+    float totaltime = 0;
+    int images = nImages.size();
+    for(int ni=0; ni<images; ni++)
+    {
+        totaltime+=vTimesTrack[ni];
+    }
+    cout << "-------" << endl << endl;
+    cout << "median tracking time: " << vTimesTrack[images/2] << endl;
+    cout << "mean tracking time: " << totaltime/images << endl;
+    
+    //
+    //cerr << "sum nano : " << sum_nano << endl;
 
     // Save camera trajectory
     if (bFileName)

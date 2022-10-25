@@ -241,6 +241,7 @@ namespace ORB_SLAM3
         DBoW2::FeatureVector::const_iterator KFend = vFeatVecKF.end();
         DBoW2::FeatureVector::const_iterator Fend = F.mFeatVec.end();
 
+
         while(KFit != KFend && Fit != Fend)
         {
             if(KFit->first == Fit->first)
@@ -269,7 +270,6 @@ namespace ORB_SLAM3
                     int bestDist1R=256;
                     int bestIdxFR =-1 ;
                     int bestDist2R=256;
-
                     for(size_t iF=0; iF<vIndicesF.size(); iF++)
                     {
                         if(F.Nleft == -1){
@@ -279,9 +279,7 @@ namespace ORB_SLAM3
                                 continue;
 
                             const cv::Mat &dF = F.mDescriptors.row(realIdxF);
-
                             const int dist =  DescriptorDistance(dKF,dF);
-
                             if(dist<bestDist1)
                             {
                                 bestDist2=bestDist1;
@@ -321,13 +319,14 @@ namespace ORB_SLAM3
                                 bestDist2R=dist;
                             }
                         }
-
+                        
                     }
 
                     if(bestDist1<=TH_LOW)
                     {
                         if(static_cast<float>(bestDist1)<mfNNratio*static_cast<float>(bestDist2))
                         {
+
                             vpMapPointMatches[bestIdxF]=pMP;
 
                             const cv::KeyPoint &kp =
@@ -351,6 +350,7 @@ namespace ORB_SLAM3
                                 assert(bin>=0 && bin<HISTO_LENGTH);
                                 rotHist[bin].push_back(bestIdxF);
                             }
+
                             nmatches++;
                         }
 
@@ -387,7 +387,6 @@ namespace ORB_SLAM3
                     }
 
                 }
-
                 KFit++;
                 Fit++;
             }
@@ -399,6 +398,7 @@ namespace ORB_SLAM3
             {
                 Fit = F.mFeatVec.lower_bound(KFit->first);
             }
+
         }
 
         if(mbCheckOrientation)
