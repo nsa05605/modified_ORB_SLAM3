@@ -1,7 +1,13 @@
 # Modified ORB-SLAM3
 
-### This is modified version of ORB-SLAM3 which extract BRISK feature in Tracking thread.  
+"반복 구조 환경을 위한 BRISK 특징 기반의 Visual SLAM", KRoC 2023
 
+This is modified version of ORB-SLAM3 which extract BRISK feature in Tracking thread.  
+
+We replaced ORB features using BRISK features of OpenCV.
+
+
+-----
 
 # ORB-SLAM3
 
