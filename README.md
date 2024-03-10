@@ -7,6 +7,21 @@ This is modified version of ORB-SLAM3 which extract BRISK feature in Tracking th
 We replaced ORB features using BRISK features of OpenCV.
 
 
+### Abstract
+One of the essential technologies for autonomous robots is Simultaneous Localization and Mapping (SLAM). In particular, since mobile robots require a small amount of calculation, visual-SLAM using a camera is suitable. In the case of the feature-based method among visual-SLAM, adequate keypoint detectors and descriptors are required. We proposes a visual SLAM system replacing the ORB(Oriented FAST and Rotated BRIEF) keypoints of ORB-SLAM3 with BRISK(Binary Robust Invariant Scalable Keypoints) keypoints for repetitive environments such as warehouse and factories Experiments were conducted in five sequences of Machine Hall in EuRoC dataset, and the results demonstrate the validity of the proposed method. They showed improved performance in sequence 1 and 2 with complicated structures and sequence 3 and 4 with fast speed, especially 1.9 times better in sequence 1 of good textures
+
+### Experimental Results
+**Feature matching**  
+(a) ORB feature, (b) BRISK feature
+<p align="center">
+  <img width=550" src="KRoC.png">
+</p>
+
+**Comparison of the RMS ATE [m]**  
+<p align="center">
+  <img width=550" src="KRoC_table.png">
+</p>
+
 -----
 
 # ORB-SLAM3
