@@ -13,12 +13,12 @@ One of the essential technologies for autonomous robots is Simultaneous Localiza
 ### Experimental Results
 **Feature matching**  
 (a) ORB feature, (b) BRISK feature
-<p align="center">
+<p align="left">
   <img width=550" src="KRoC.png">
 </p>
 
 **Comparison of the RMS ATE [m]**  
-<p align="center">
+<p align="left">
   <img width=550" src="KRoC_table.png">
 </p>
 
